@@ -1,0 +1,63 @@
+---
+- hosts: nifi-instance
+  become: true
+
+  vars:
+    nifi_version: "{{ nifi_version | default('2.0.0-M1') }}"
+
+  tasks:
+    - name: Download Oracle JDK tarball
+      ansible.builtin.get_url:
+        url: "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz"
+        dest: "/tmp/oracle_jdk.tar.gz"
+        mode: '0644'
+
+    - name: Extract Oracle JDK
+      ansible.builtin.unarchive:
+        src: "/tmp/oracle_jdk.tar.gz"
+        dest: "/opt/"
+        remote_src: true
+        creates: "/opt/jdk21"
+        mode: '0755'
+
+    - name: Set JAVA_HOME environment variable
+      ansible.builtin.lineinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        line: 'export JAVA_HOME=/opt/jdk21'
+        create: yes
+
+    - name: Add JAVA_HOME to PATH
+      ansible.builtin.lineinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        line: 'export PATH=$JAVA_HOME/bin:$PATH'
+        insertafter: 'export JAVA_HOME=/opt/jdk21'
+        create: yes
+
+    - name: Load the updated .bashrc
+      ansible.builtin.command: "bash -c 'source /home/{{ ansible_user }}/.bashrc'"
+      args:
+        executable: /bin/bash
+
+    - name: Download and Extract NiFi
+      become: yes
+      get_url:
+        url: "https://www.apache.org/dyn/closer.lua/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz"
+        dest: "/opt/"
+      delegate_to: localhost
+
+    - name: Extract NiFi Archive
+      become: yes
+      ansible.builtin.unarchive:
+        src: "/opt/nifi-{{ nifi_version }}-bin.tar.gz"
+        dest: "/opt/"
+        remote_src: true
+
+    - name: Configure NiFi
+      become: yes
+      template:
+        src: "nifi.properties.j2"
+        dest: "/opt/nifi-{{ nifi_version }}/conf/nifi.properties"
+
+    - name: Start NiFi
+      become: yes
+      command: "/opt/nifi-{{ nifi_version }}/bin/nifi.sh start"
