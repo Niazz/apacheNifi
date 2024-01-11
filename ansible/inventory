@@ -1,2 +1,2 @@
 [nifi-instance]
-18.196.210.9 ansible_ssh_private_key_file=~/.ssh/sshKeyApp.pem ansible_user=ec2-user
+3.79.235.214 ansible_ssh_private_key_file=~/.ssh/sshKeyApp.pem ansible_user=ec2-user

@@ -6,6 +6,11 @@
     nifi_version: "{{ nifi_version | default('2.0.0-M1') }}"
 
   tasks:
+    - name: Install tar
+      ansible.builtin.dnf:
+        name: tar
+      become: yes
+
     - name: Download Oracle JDK tarball
       ansible.builtin.get_url:
         url: "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz"
@@ -37,25 +42,27 @@
       ansible.builtin.command: "bash -c 'source /home/{{ ansible_user }}/.bashrc'"
       args:
         executable: /bin/bash
-
-    - name: Install unzip and tar
-      ansible.builtin.dnf:  # Use dnf module for systems using Python 3
-        name:
-          - unzip
-          - tar
-      become: yes
-
+      
     - name: Download NiFi tarball
       ansible.builtin.get_url:
-        url: "https://www.apache.org/dyn/closer.lua/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz"
-        dest: "/tmp/nifi-{{ nifi_version }}-bin.tar.gz"
+        url: "https://archive.apache.org/dist/nifi/2.0.0-M1/nifi-2.0.0-M1-bin.zip"
+        dest: "/tmp/nifi-{{ nifi_version }}-bin.zip"
         mode: '0644'
 
     - name: Extract NiFi
-      ansible.builtin.command: "tar xzf /tmp/nifi-{{ nifi_version }}-bin.tar.gz -C /opt/"
+      ansible.builtin.unarchive:
+        src: "/tmp/nifi-{{ nifi_version }}-bin.zip"
+        dest: "/opt/"
+        remote_src: true
       become: yes
       args:
         creates: "/opt/nifi-{{ nifi_version }}/"
+
+    - name: Set permissions for NiFi directory
+      ansible.builtin.file:
+        path: "/opt/nifi-{{ nifi_version }}"
+        mode: '0755'
+        recurse: yes
 
     - name: Configure NiFi
       become: yes
