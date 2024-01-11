@@ -38,19 +38,24 @@
       args:
         executable: /bin/bash
 
-    - name: Download and Extract NiFi
+    - name: Install unzip and tar
+      ansible.builtin.dnf:  # Use dnf module for systems using Python 3
+        name:
+          - unzip
+          - tar
       become: yes
-      get_url:
-        url: "https://www.apache.org/dyn/closer.lua/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz"
-        dest: "/opt/"
-      delegate_to: localhost
 
-    - name: Extract NiFi Archive
+    - name: Download NiFi tarball
+      ansible.builtin.get_url:
+        url: "https://www.apache.org/dyn/closer.lua/nifi/{{ nifi_version }}/nifi-{{ nifi_version }}-bin.tar.gz"
+        dest: "/tmp/nifi-{{ nifi_version }}-bin.tar.gz"
+        mode: '0644'
+
+    - name: Extract NiFi
+      ansible.builtin.command: "tar xzf /tmp/nifi-{{ nifi_version }}-bin.tar.gz -C /opt/"
       become: yes
-      ansible.builtin.unarchive:
-        src: "/opt/nifi-{{ nifi_version }}-bin.tar.gz"
-        dest: "/opt/"
-        remote_src: true
+      args:
+        creates: "/opt/nifi-{{ nifi_version }}/"
 
     - name: Configure NiFi
       become: yes
